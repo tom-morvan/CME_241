@@ -1,5 +1,6 @@
 import abc
 import numpy as np
+from numpy.random import normal
 from scipy.stats import norm
 
 class Stock:
@@ -40,7 +41,7 @@ class European(Option):
     def __init__(self, 
                  stock: Stock, 
                  strike: float):
-        super.__init__(stock, strike)
+        super().__init__(stock, strike)
     
     def price_call(self, 
                    price_date_index: int,
@@ -75,5 +76,20 @@ class American(Option):
     def __init__(self, 
                  stock: Stock, 
                  strike: float):
-        super.__init__(stock, strike)
+        super().__init__(stock, strike)
         
+    ##To Do
+    
+    
+if __name__ == '__main__':
+    
+    time = np.linspace(0,1,365)
+    prices = 100 + normal(0,1,365) # random prices, no model
+    vol = np.ones(365)
+    rate = 0.02
+    
+    AAPL = Stock(prices, time, vol, rate)
+    OC_AAPL = European(AAPL, 160)
+    print(OC_AAPL.price_call(0,364))
+    
+    

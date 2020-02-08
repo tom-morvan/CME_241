@@ -31,6 +31,6 @@ class MRP(MP):
             
     def get_value_vec(self):
         return(np.dot(inv(np.eye(self.nb_states - self.disc_fact*self.transistions)),
-                           self.reward_vec))
+                           np.transpose(self.reward_vec)))
         
         

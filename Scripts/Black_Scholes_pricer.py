@@ -39,9 +39,8 @@ class European(Option):
     
     def __init__(self, 
                  stock: Stock, 
-                 strike: float, 
-                 vol: np.ndarray):
-        super.__init__(stock, strike, vol)
+                 strike: float):
+        super.__init__(stock, strike)
     
     def price_call(self, 
                    price_date_index: int,
@@ -70,4 +69,11 @@ class European(Option):
         r = self.stock.rfr
         
         return(C - S + K*np.exp(-r*(T-t)))
+        
+class American(Option):
+    
+    def __init__(self, 
+                 stock: Stock, 
+                 strike: float):
+        super.__init__(stock, strike)
         

@@ -42,7 +42,6 @@ class European(Option):
                  strike: float, 
                  vol: np.ndarray):
         super.__init__(stock, strike, vol)
-        
     
     def price_call(self, 
                    price_date_index: int,

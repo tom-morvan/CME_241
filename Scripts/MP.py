@@ -18,7 +18,7 @@ class MP:
         self.states_list = states_list
         self.nb_states = len(states_list)
         self.transistions = transitions
-        self.successors = self.get_sink_states()
+        self.successors = self.get_successors()
         
     
     def get_sink_states(self):

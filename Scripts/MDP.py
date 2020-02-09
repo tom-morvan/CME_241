@@ -1,40 +1,45 @@
 import numpy as np
 from numpy.linalg import inv
 from MP import State
+import MRP
 
-class Action:
+class Action(MRP):
     
     def __init__(self, 
                  index: int,
                  states_list: list,
-                 state_transitions: np.ndarray):
-        self.index = index
-        self.states_list = states_list
-        self.state_transitions = state_transitions
-        self.nb_states
-        self.successors = self.get_successors()
-        self.reward_vec = self.get_reward_vec()
-    
-    def get_successors(self):
-        successors = dict()
-        for state in self.states_list:
-            if (state not in successors.keys()):
-                successors[state] = []
-            for j in range(0, self.nb_states):
-                prob = self.transistions[state.index][j]
-                if prob != 0:
-                    successors[state].append((self.states_list[j], prob))
-        return(successors)
-    
-    def get_state_reward(self, 
-                         state: State):
-        reward = 0
-        for successor in self.successors[state]:
-            reward += successor[0].reward*successor[1]
-        return(reward)
+                 state_transitions: np.ndarray,
+                 disc_fact: float):
         
-    def get_reward_vec(self):
-        return(np.array([self.get_state_reward(state) for state in self.states_list]))
+        super().__init__(states_list, state_transitions, disc_fact)
+        self.index = index
+    
+# =============================================================================
+#     def get_successors(self):
+#         successors = dict()
+#         for state in self.states_list:
+#             if (state not in successors.keys()):
+#                 successors[state] = []
+#             for j in range(0, self.nb_states):
+#                 prob = self.transistions[state.index][j]
+#                 if prob != 0:
+#                     successors[state].append((self.states_list[j], prob))
+#         return(successors)
+# =============================================================================
+    
+# =============================================================================
+#     def get_state_reward(self, 
+#                          state: State):
+#         reward = 0
+#         for successor in self.successors[state]:
+#             reward += successor[0].reward*successor[1]
+#         return(reward)
+# =============================================================================
+        
+# =============================================================================
+#     def get_reward_vec(self):
+#         return(np.array([self.get_state_reward(state) for state in self.states_list]))
+# =============================================================================
 
             
 # =============================================================================
@@ -87,7 +92,6 @@ class MDP:
                            np.transpose(self.reward_policy_vec)))
     
     
-        
         
         
         

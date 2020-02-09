@@ -15,7 +15,6 @@ class MRP(MP):
         self.disc_fact = disc_fact
         self.reward_vec = self.get_reward_vec()
         self.value_vec = self.get_value_vec()
-        self.returns = None
     
     
     def get_state_reward(self, 

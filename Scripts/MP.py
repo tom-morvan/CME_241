@@ -1,5 +1,11 @@
 import numpy as np
-#from numpy.linalg import eig
+from numpy.linalg import eig, inv
+
+
+def diag(A: np.ndarray):
+    
+    eig_val, eig_vec = eig(A)
+    return(np.dot(np.dot(inv(eig_vec), A),eig_vec))
 
 class State:
     
@@ -38,6 +44,18 @@ class MP:
                 if prob != 0:
                     successors[state].append((self.states_list[j], prob))
         return(successors)
-
         
+    def get_stationnary(self):
+        
+        eig_vals, eig_vecs = eig(self.transistions)
+        for i in range(0,self.nb_states):
+            if(abs(eig_vals[i] - 1) < 1e-16):
+                return(eig[i])
+
+
+
+if __name__ == "__main__":
+    
+    A = np.array([[1,2,3],[4,5,6],[7,8,9]])
+    D = diag(A)
     

@@ -8,66 +8,9 @@ from MRP import MRP
 from MDP import Action, MDP
 
 
-
-# ---------------
-# EPISODE METHODS
-# ---------------
-    
-# ----------
-# DEPRECATED
-# ----------
-# =============================================================================
-# def generate_episode(process: MDP, 
-#                      policy: np.ndarray = np.array([None]), 
-#                      max_len: int = 200):
-#     states = []
-#     actions = []
-#     returns = []
-#     policy = process.policy if policy.any() == None else policy
-#     start_state = process.states_list[random.randint(0, process.nb_states-1)]
-#     states.append(start_state)
-#     finished = False
-#     len_ep = max_len #random.randint(0,max_len)
-#     counter = 1
-#     while not finished:
-#         
-#         # ---- Generate next Action ----
-#         p = random.uniform(0,1)
-#         curr_state = states[-1]
-#         cdf = 0.0
-#         action_index = -1
-#         while cdf < p:
-#             action_index += 1
-#             cdf += policy[curr_state.index][action_index]
-#         action = process.actions_list[action_index]
-#         actions.append(action)
-#         
-#         # ---- Get Reward associated ----
-#         returns.append(action.reward_vec[curr_state.index])
-#         
-#         # ---- Predict next state ----
-#         p = random.uniform(0,1)
-#         cdf = 0.0
-#         next_state_index = -1
-#         while cdf < p:
-#             next_state_index += 1
-#             cdf += action.transitions[curr_state.index,next_state_index]
-#         next_state = process.states_list[next_state_index]
-#         states.append(next_state)
-#         
-#         # ---- Stop Condition ----
-#         counter += 1
-#         if next_state.terminal:
-#             finished = True
-#         if counter > len_ep:
-#             finished = True
-#             
-#     return(states,actions,returns)
-# =============================================================================
-
-# ------------------
-# MONTE CARLO MEHODS
-# ------------------
+# -------------------
+# MONTE CARLO METHODS
+# -------------------
     
 # ---- PERDICTION | First Visit ----
 
@@ -108,33 +51,35 @@ def Every_Visit_Monte_Carlo(process: MDP,
                                                 /count_state[current_state.index]
     return state_value
 
-# ---- CONTROL | On Policy First Visit ----
+# ---- CONTROL | GLIE - On Policy Every Visit ----
     
-def First_Visit_Control_Monte_Carlo(process: MDP,
-                                    env: Environment,
-                                    n_iter: int = 5000,
-                                    eps: float = 0.01):
-    policy = np.ones((process.nb_states, process.nb_actions))/process.nb_actions
-    state_value = np.zeros(process.nb_states)
-    count_state = np.zeros(process.nb_states)
-    
-    for i in range(n_iter):
+def GLIE(process: MDP,
+         env: Environment,
+         n_iter: int = 5000,
+         eps: float = 0.01):
+                                               
+    Q_value = np.zeros((process.nb_states, process.nb_actions))
+    count_state_action = np.zeros((process.nb_states, process.nb_actions))
+    for i in range(1, n_iter+1):
+        epsilon = 1/i
+        policy = process.get_Q_policy(Q_value, epsilon)
+        env.policy = policy
         states, actions, returns = env.generate_episode()
         G = 0
         for j in range(len(returns)-1, 0, -1):
             G = process.disc_fact*G + returns[j]
             current_state = states[j]
-            if current_state not in states[:j-1]:
-                count_state[current_state.index] += 1
-                state_value[current_state.index] += (G - state_value[current_state.index]) \
-                                                    /count_state[current_state.index]
-    return state_value
+            current_action = actions[j]
+            count_state_action[current_state.index, current_action.index] += 1
+            Q_value[current_state.index, current_action.index] += \
+            (G - Q_value[current_state.index, current_action.index]) / count_state_action[current_state.index, current_action.index]
+    return process.get_Q_policy(Q_value)
 
 
 
-# ------------------
-# MONTE CARLO MEHODS
-# ------------------
+# ---------------------------
+# Temporal Difference METHODS
+# ---------------------------
     
 # ---- PERDICTION | TD(0) ----
     
@@ -160,6 +105,7 @@ def TD_0(process: MDP,
             state_value[current_state.index] += alpha * (reward + 
                         process.disc_fact * state_value[next_state.index] - 
                         state_value[current_state.index])
+            current_state = next_state
             
             # ---- Stop Condition ----
             counter += 1
@@ -167,6 +113,8 @@ def TD_0(process: MDP,
                 ep_finished = True
             if counter > max_ep_len:
                 ep_finished = True
+                
+            
     return state_value    
 
 
@@ -180,7 +128,7 @@ def TD_lambda_forward(process: MDP,
     
     state_value = np.zeros(process.nb_states)
     for i in range(n_iter):
-        states, actions, returns = env.generate_episode(200)
+        states, actions, returns = env.generate_episode()
         ep_len = len(returns)
         for t in range(0, ep_len):
             current_state = states[t]
@@ -208,7 +156,9 @@ def TD_lambda_backward(process: MDP,
     
     state_value = np.zeros(process.nb_states)
     for i in range(n_iter):
-        E_t = np.zeros(process.nb_states)
+        
+        # ---- Init Eligibility Trace ----
+        E_t = np.zeros(process.nb_states) 
         current_state = env.get_random_state()
         counter = 1
         ep_finished = False
@@ -227,6 +177,7 @@ def TD_lambda_backward(process: MDP,
             error = reward + process.disc_fact*state_value[next_state.index] -\
                     state_value[current_state.index]
             state_value += alpha * error * E_t
+            current_state = next_state
             
             # ---- Stop Condition ----
             counter += 1
@@ -235,8 +186,151 @@ def TD_lambda_backward(process: MDP,
             if counter > max_ep_len:
                 ep_finished = True
             
+            
     return state_value   
 
+
+# ---- CONTROL | SARSA - On policy ----
+
+def SARSA(process: MDP, 
+          env: Environment,
+          alpha : float = 0.01,
+          n_iter: int = 5000,
+          max_ep_len: int = 200):
+    
+    Q_value = np.zeros((process.nb_states, process.nb_actions))
+    for i in range(1, n_iter + 1):
+        epsilon = 1/i
+    
+        current_state = env.get_random_state()
+        counter = 1
+        ep_finished = False
+        while not ep_finished:
+            
+            # ---- Update Policy ----
+            policy = process.get_Q_policy(Q_value, epsilon)
+            env.policy = policy
+            
+            # ---- MDP stepping ----
+            current_action = env.generate_action(current_state)
+            reward = env.generate_return(current_state,current_action)
+            next_state = env.step(current_state,current_action)
+            next_action = env.generate_action(next_state)
+            
+            # ---- Updating Q_value function ----
+            Q_value[current_state.index, current_action.index] += \
+            alpha * (reward + process.disc_fact * Q_value[next_state.index, next_action.index] - \
+                     Q_value[current_state.index, current_action.index] )
+            current_state = next_state
+            current_action = next_action
+            
+            # ---- Stop Condition ----
+            counter += 1
+            if next_state.terminal:
+                ep_finished = True
+            if counter > max_ep_len:
+                ep_finished = True
+    
+    
+    return(process.get_Q_policy(Q_value))
+    
+
+# ---- CONTROL | SARSA(lambda) - On policy ----
+
+def SARSA_lambda(process: MDP, 
+          env: Environment,
+          lambda_: float = 0.7,
+          alpha : float = 0.01,
+          n_iter: int = 5000,
+          max_ep_len: int = 200):
+    
+    Q_value = np.zeros((process.nb_states, process.nb_actions))
+    for i in range(1, n_iter + 1):
+        
+        epsilon = 1/i
+        
+        # ---- Init Eligibility Trace ----
+        E_t = np.zeros((process.nb_states, process.nb_actions)) 
+        current_state = env.get_random_state()
+        counter = 1
+        ep_finished = False
+        while not ep_finished:
+            
+            # ---- Update Policy ----
+            policy = process.get_Q_policy(Q_value, epsilon)
+            env.policy = policy
+            
+            # ---- MDP stepping ----
+            current_action = env.generate_action(current_state)
+            reward = env.generate_return(current_state,current_action)
+            next_state = env.step(current_state,current_action)
+            next_action = env.generate_action(next_state)
+            
+            # ---- Updating Eligibility Trace ----
+            E_t[current_state.index, current_action.index] += 1
+            E_t *= process.disc_fact * lambda_
+            
+            # ---- Updating Q_value function ----
+            error = reward + process.disc_fact * Q_value[next_state.index, next_action.index] - \
+                     Q_value[current_state.index, current_action.index]
+            Q_value += alpha * error * E_t
+            current_state = next_state
+            current_action = next_action
+            
+            # ---- Stop Condition ----
+            counter += 1
+            if next_state.terminal:
+                ep_finished = True
+            if counter > max_ep_len:
+                ep_finished = True
+    
+    
+    return(process.get_Q_policy(Q_value))    
+
+
+# ---- CONTROL | Q Learning - Off policy ----
+
+def Q_learning(process: MDP, 
+          env: Environment,
+          lambda_: float = 0.7,
+          alpha : float = 0.01,
+          n_iter: int = 5000,
+          max_ep_len: int = 200):
+    
+    Q_value = np.zeros((process.nb_states, process.nb_actions))
+    for i in range(1, n_iter + 1):
+        
+        epsilon = 1/i
+        current_state = env.get_random_state()
+        counter = 1
+        ep_finished = False
+        while not ep_finished:
+            
+            # ---- Update Policy ----
+            policy = process.get_Q_policy(Q_value, epsilon)
+            env.policy = policy
+            
+            # ---- MDP stepping ----
+            current_action = env.generate_action(current_state)
+            reward = env.generate_return(current_state,current_action)
+            next_state = env.step(current_state,current_action)
+            
+            # ---- Updating Q_value function ----
+            
+            Q_value[current_state.index, current_action.index] += alpha * (reward + \
+                   process.disc_fact * Q_value[next_state.index,:].max() - \
+                   Q_value[current_state.index, current_action.index])
+            current_state = next_state
+            
+            # ---- Stop Condition ----
+            counter += 1
+            if next_state.terminal:
+                ep_finished = True
+            if counter > max_ep_len:
+                ep_finished = True
+    
+    
+    return(process.get_Q_policy(Q_value))   
 
 
 if __name__ == "__main__":
@@ -290,7 +384,7 @@ if __name__ == "__main__":
     
     # ----
     transitions_b = np.array([[0.0, 0.3, 0.7],
-                              [0.0, 0.0, 0.0],
+                              [1/3, 1/3, 1/3],
                               [0.0, 0.5, 0.5]])
     reward_b = np.array([2.8, 0.0, 10.0])
     b = Action("b", chain, transitions_b, reward_b)
@@ -299,7 +393,7 @@ if __name__ == "__main__":
     # ----
     transitions_c = np.array([[0.2, 0.4, 0.4],
                               [0.2, 0.6, 0.2],
-                              [0.0, 0.0, 0.0]])
+                              [1/3, 1/3, 1/3]])
     reward_c = np.array([-7.2, -7.2, 0.0])
     c = Action("c", chain, transitions_c,reward_c)
     # ----
@@ -327,9 +421,15 @@ if __name__ == "__main__":
     # -------
     # TESTING
     # -------
+    
+# =============================================================================
+#     for action in chain.actions_list:
+#         print(action.index)
+# =============================================================================
+    
 # =============================================================================
 #     #First visit Monte Carlo:
-#     mc = First_Visit_Monte_Carlo(chain)
+#     mc = First_Visit_Monte_Carlo(chain, env)
 #     print(mc)
 # =============================================================================
     
@@ -356,4 +456,30 @@ if __name__ == "__main__":
 #     TD = TD_lambda_backward(chain, env)
 #     print(TD)
 # =============================================================================
+    
+# =============================================================================
+#     # TD_lambda Backward
+#     GLIE = GLIE(chain, env)
+#     print(GLIE)
+# =============================================================================
 
+# =============================================================================
+#     # SARSA
+#     SARSA = SARSA(chain, env)
+#     print(SARSA)
+# =============================================================================
+    
+# =============================================================================
+#     # SARSA Lambda
+#     SARSA_l = SARSA_lambda(chain, env)
+#     print(SARSA_l)
+# =============================================================================
+    
+# =============================================================================
+#      # Q_learning 
+#     Q_learn = Q_learning(chain, env)
+#     print(Q_learn)
+# =============================================================================
+    
+    
+    

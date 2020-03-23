@@ -123,6 +123,7 @@ class MDP:
         self.policy = policy 
         
         self.MRP = None
+        
     
     # ----------------
     # MDP Manipulation
@@ -191,7 +192,7 @@ class MDP:
         Sets the MRP policy view of the MDP. 
         """
         policy = self.policy if policy.any() == None else policy
-        self.MRP = MRP(states_list, self.disc_fact, 
+        self.MRP = MRP(self.states_list, self.disc_fact, 
                        self.MRP_transition_policy(policy), 
                        self.MRP_reward_policy_vec(policy))
      
@@ -226,10 +227,15 @@ class MDP:
     # Policy Iteration
     # ----------------
     
-    def improve_policy(self, policy):
-        
+    def improve_policy(self, policy, epsilon = 0.0):
+        """
+        Returns
+        -------
+        Numpy 2D Array
+            Policy improved through Bellman optimality Equation
+        """
         value_vec = self.policy_evaluation(policy)
-        new_policy = np.zeros((self.nb_states, self.nb_actions))
+        new_policy = np.ones((self.nb_states, self.nb_actions))*epsilon/self.nb_actions
         for state in self.states_list:
             temp_value = float("-inf")
             temp_index = -1
@@ -239,10 +245,10 @@ class MDP:
                 if temp_value < q_value:
                     temp_value = q_value                          
                     temp_index = action.index
-            new_policy[state.index][temp_index] = 1.0
+            new_policy[state.index][temp_index] += 1.0 - epsilon
         return(new_policy)
-            
-        
+
+
     def policy_iteration(self, policy = np.array([None])):
         """
         Returns
@@ -311,7 +317,25 @@ class MDP:
         """
         pass
    
-
+    
+    def get_Q_policy(self, Q_value : np.ndarray,  epsilon = 0.0):
+        """
+        Returns
+        -------
+        Numpy 2D Array
+            Policy based on estimated Q_value
+        """
+        policy = np.ones((self.nb_states, self.nb_actions))*epsilon/self.nb_actions
+        for state in self.states_list:
+            temp_value = float("-inf")
+            temp_index = -1
+            for action in self.actions_list:
+                q_value = Q_value[state.index][action.index]
+                if temp_value < q_value:
+                    temp_value = q_value                          
+                    temp_index = action.index
+            policy[state.index][temp_index] += 1.0 - epsilon
+        return(policy)
      
 if __name__ == "__main__":
     

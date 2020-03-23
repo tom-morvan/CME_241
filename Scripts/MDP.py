@@ -415,7 +415,10 @@ if __name__ == "__main__":
     #print(chain.MRP.reward_vec)
     print(chain.policy_evaluation())
     print(chain.policy_iteration())
-    print(chain.policy_evaluation(chain.policy_iteration()))
-    print(chain.value_iteration())
-    
+# =============================================================================
+#     print(chain.value_iteration())
+#     chain.policy = chain.policy_iteration()
+#     chain.set_MRP()
+#     print(chain.MRP.reward_vec)
+# =============================================================================
     

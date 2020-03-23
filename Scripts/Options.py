@@ -114,7 +114,6 @@ class American(Option):
               maturity_index: int,
               strike: float):
         pass
-    ##To Do
 
 class American_call(American):
     
@@ -141,6 +140,9 @@ class American_call(American):
         #N = n*(n+1)//2
         deltaT = (T-t)/N
         
+        # ------------------------------------------------
+        # NOTE : following code is copied from a blog post
+        # ------------------------------------------------
         
         # up and down factor will be constant for the tree so we calculate outside the loop
         u = np.exp(sigma * np.sqrt(deltaT))
@@ -176,29 +178,7 @@ class American_call(American):
                                
         # print fs
         return fs[0]
-        
-        
-# =============================================================================
-#         up = np.exp(sigma*np.sqrt(delta_t))
-#         p0 = - np.exp(-r * delta_t) / (up**2 - 1)
-#         p1 = np.exp(-r * delta_t) - p0
-#         
-#         prices = []
-#         for i in range(0,n):
-#             price = max(0,S * up**(2*i - n) - K)
-#             prices.append(price)
-#         
-#         for j in range(n-1,-1,-1):
-#             for i in range(0,j):
-#                   #binomial value
-#                   prices[i] = p0 * prices[i+1] + p1 * prices[i] 
-#                   #exercise value
-#                   exercise = S * up**(2*i - j) - K
-#                   prices[i] = max(prices[i], exercise)
-#         return prices[0]
-# =============================================================================
-    ##To Do
-    
+           
 
     
     
